@@ -15,6 +15,7 @@ from autoregressive.models.gpt import GPT_models
 from autoregressive.models.generate import generate
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+from mavt_wrapper import MAVTForLlamaGen
 
 
 def main(args):
@@ -25,16 +26,24 @@ def main(args):
     torch.set_grad_enabled(False)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # create and load model
-    vq_model = VQ_models[args.vq_model](
-        codebook_size=args.codebook_size,
-        codebook_embed_dim=args.codebook_embed_dim)
-    vq_model.to(device)
-    vq_model.eval()
-    checkpoint = torch.load(args.vq_ckpt, map_location="cpu")
-    vq_model.load_state_dict(checkpoint["model"])
-    del checkpoint
-    print(f"image tokenizer is loaded")
+    # # create and load model
+    # vq_model = VQ_models[args.vq_model](
+    #     codebook_size=args.codebook_size,
+    #     codebook_embed_dim=args.codebook_embed_dim)
+    # vq_model.to(device)
+    # vq_model.eval()
+    # checkpoint = torch.load(args.vq_ckpt, map_location="cpu")
+    # vq_model.load_state_dict(checkpoint["model"])
+    # del checkpoint
+    # print(f"image tokenizer is loaded")
+    
+    print(f"Đang khởi tạo MAVT Tokenizer (DDP Rank {rank})...")
+    vq_model = MAVTForLlamaGen(
+        device=device, 
+        latent_dim=32, 
+        codebook_size=args.codebook_size
+    )
+    print(f"MAVT image tokenizer is loaded successfully on Rank {rank}")
 
     # create and load gpt model
     precision = {'none': torch.float32, 'bf16': torch.bfloat16, 'fp16': torch.float16}[args.precision]
